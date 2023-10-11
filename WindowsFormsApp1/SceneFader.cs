@@ -49,7 +49,7 @@ namespace WindowsFormsApp1
         
             originalForm = _form;
             backgroundPicturebox = _backgroundPicturebox;
-            SceneDic = _SceneDic;
+            SceneDic = _SceneDic; 
 
         }
 
