@@ -23,7 +23,7 @@ namespace WindowsFormsApp1
             return _isEnabled;
         }
         
-
+         
         public static void StopAllTimers() {
             foreach (Timer _t in timerDic.Values) {
                 _t.Stop();
