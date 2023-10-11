@@ -464,7 +464,7 @@ namespace WindowsFormsApp1
         }
 
         /// <summary>
-        /// 점수 추가( 0점 아래로 내려가지 않음 )
+        /// 점수 추가( 0점 아래로 내려가지 않음 ) 
         /// </summary>
         /// <param name="value">추가할 점수</param>
         /// <returns></returns>
