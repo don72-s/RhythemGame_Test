@@ -11,7 +11,7 @@ namespace WindowsFormsApp1
         private static float bgmVolume = 0.5f;
         private static float fxVolume = 0.5f;
 
-        public static void addBgmVolume(float _value) {
+        public static void addBgmVolume(float _value) { 
             bgmVolume += _value;
         }
 
