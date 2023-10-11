@@ -63,7 +63,7 @@ namespace WindowsFormsApp1
 
         private bool sh = true;
         private int xPos;
-        private int shakeCount = 0;
+        private int shakeCount = 0; 
         
         public void setXpos(int _x) {
             xPos = _x;
