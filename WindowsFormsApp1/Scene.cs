@@ -40,8 +40,9 @@ namespace WindowsFormsApp1
 
         private List<int> curStateStack = new List<int>();
 
-        protected PicBox textPicBox = null;
-        protected Label textPictureboxLabel = null;
+/*        protected PicBox textPicBox = null;
+        protected Label textPictureboxLabel = null;*/
+        protected ITextPrinter ITextPrinter = null;
 
         public ScenePictureClass(ISceneChange _IScene)
         {
@@ -65,12 +66,18 @@ namespace WindowsFormsApp1
             independentPicBoxes.Add(_p);
         }
 
-        //게터 세터
-        public MediaPlayer BGM
-        {
-            get { return bgm; }
-            set { bgm = value; }
+        public void setBGM(MediaPlayer _bgm) { 
+            bgm = _bgm;
+            if (ITextPrinter != null) {
+                ITextPrinter.setBGM(bgm);
+            }
         }
+
+        public MediaPlayer getBGM() {
+            return bgm;
+        }
+
+
         public Image BackgrndBuffer
         {
             get { return backgrndBuffer; }
@@ -265,12 +272,15 @@ namespace WindowsFormsApp1
 
         #region 텍스트 관련 영역
 
-        protected int textListCounter = 0;
-        protected int textIndexer = 0;
-        protected bool isFin = true;
-        protected string _tmpStr;
 
-        protected List<string> textList = new List<string>();
+        /// <summary>
+        /// 더미 텍스트박스 세팅
+        /// </summary>
+        public void textboxSetting() {
+
+            ITextPrinter = new TextPrinter(null, null, bgm, SceneChanger, IsKeywordText, keywordDefine1, keywordDefine2);
+
+        }
 
         /// <summary>
         /// 텍스트 박스 초기 세팅
@@ -279,11 +289,15 @@ namespace WindowsFormsApp1
         /// <param name="_l">연결시킬 TextLabel 변수</param>
         public void textboxSetting(PicBox _p, Label _l)
         {
-            textPicBox = _p;
-            textPicBox.pictureBox.Image = textPicBox.images[1];
-            _l.Parent = textPicBox.pictureBox;
-            textPictureboxLabel = _l;
+            //textPicBox = _p;
+            _p.pictureBox.Image = _p.images[1];
+            _l.Parent = _p.pictureBox;
+            //textPictureboxLabel = _l;
+
+            ITextPrinter = new TextPrinter(_l, _p, bgm, SceneChanger, IsKeywordText, keywordDefine1, keywordDefine2);
+
         }
+
 
         /// <summary>
         /// 대사 리스트에 텍스트 추가
@@ -291,23 +305,7 @@ namespace WindowsFormsApp1
         /// <param name="_s">추가할 문자열</param>
         public void addText(string _s)
         {
-            textList.Add(_s);
-        }
-
-        /// <summary>
-        /// 임시 변수에 다음 출력할 텍스트 로딩
-        /// </summary>
-        /// <param name="_counter">리스트에서 읽어올 인덱스</param>
-        public void setTmpStr(int _counter) {
-
-            if (_counter < textList.Count)
-            {
-                _tmpStr = textList[_counter];
-            }
-            else {
-                throw new Exception("텍스트 출력 인덱서 오류");
-            }
-
+            ITextPrinter.addText(_s);
         }
 
         /// <summary>
@@ -315,31 +313,8 @@ namespace WindowsFormsApp1
         /// </summary>
         public void TextPrinter()
         {
-            //다음 출력할 텍스트 설정
-            setTmpStr(textListCounter);
 
-            //명령어 텍스트인지 확인
-            if (IsKeywordText()) return;
-
-            if (isFin)
-            {
-                textPictureboxLabel.Text = _tmpStr;
-                Timers.StopTimer(TimerType.TEXT_TIMER);
-            }
-            else
-            {
-                if (_tmpStr.Length > textIndexer)
-                {
-                    textPictureboxLabel.Text += _tmpStr[textIndexer];
-                    textIndexer++;
-                }
-                else
-                {
-                    isFin = true;
-                    Timers.StopTimer(TimerType.TEXT_TIMER);
-                }
-            }
-           
+            ITextPrinter.PrintText();
 
         }
 
@@ -354,63 +329,16 @@ namespace WindowsFormsApp1
         /// <returns>텍스트가 이미 전부 출력되어 있었으면 true</returns>
         public bool PrintTextLineByIndex(int _index, bool _isImmidate = false, bool _isClear = true)
         {
-            setTmpStr(_index);
-            if (IsKeywordText()) return false;
 
-            if (_isImmidate)
-            {
-                Timers.StopTimer(TimerType.TEXT_TIMER);
-                if (!isFin)
-                {
-                    if (_isClear)
-                    {
-                        textPictureboxLabel.Text = _tmpStr;
-                        isFin = true;
-                        return false;
-                    }
-                    else {//다음에 붙여서 추가 출력
-                        textPictureboxLabel.Text = textPictureboxLabel.Text + _tmpStr;
-                        return false;
-                    }
-                }
-            }
-            else
-            {
-                InitTextBox();
-                textListCounter = _index;
-                isFin = false;
-                Timers.StartTimer(TimerType.TEXT_TIMER);
-            }
-            return isFin;
+            return ITextPrinter.PrintTextLineByIndex(_index, _isImmidate, _isClear);
         }
         
         /// <summary>
         /// zKeyInput 이벤트가 트리거 되었을 때 호출될 텍스트 출력 메소드
         /// </summary>
         protected void TextBoxzKeyInput() {
-            if (!Timers.isTimerEnabled(TimerType.STAGE_TIC_TIMER))
-            {
-                //텍스트를 끝까지 전부 출력 -> 메인메뉴 귀환
-                if (textPictureboxLabel.Text.Equals(textList[textList.Count - 1]))
-                {
-                    init();
-                    SceneChanger.ChangeScene(Scene.MAIN_MENU);
-                    return;
-                }
 
-                if (!isFin)
-                {
-                    isFin = true;
-                }
-                else
-                {
-                    ClearTextBox();
-                    isFin = false;
-                    textListCounter++;
-                    textIndexer = 0;
-                    Timers.StartTimer(TimerType.TEXT_TIMER);
-                }
-            }
+            ITextPrinter.TextBoxzKeyInput(init);
         }
 
         /// <summary>
@@ -418,17 +346,9 @@ namespace WindowsFormsApp1
         /// </summary>
         /// <param name="_isVisible">투명화 변수</param>
         protected void TextboxVisible(bool _isVisible) {
-            if (textPicBox == null) return;
-            ClearTextBox();
-            textPicBox.pictureBox.Image = _isVisible ? textPicBox.images[1] : textPicBox.images[0];
-        }
 
-        /// <summary>
-        /// 텍스트 비움
-        /// </summary>
-        protected void ClearTextBox()
-        {
-            textPictureboxLabel.Text = "";
+            ITextPrinter.TextboxVisible(_isVisible);
+
         }
 
         /// <summary>
@@ -436,10 +356,8 @@ namespace WindowsFormsApp1
         /// </summary>
         protected void InitTextBox()
         {
-            ClearTextBox();
-            textListCounter = 0;
-            textIndexer = 0;
-            isFin = false;
+            ITextPrinter.InitTextBox();
+
         }
 
         /// <summary>
@@ -448,51 +366,15 @@ namespace WindowsFormsApp1
         /// <returns></returns>
         protected bool IsKeywordText() {
 
-            if (_tmpStr.Equals("Pass"))
-            {
-                KeywordPass();
-            }
-            else if (_tmpStr.Equals("Repeat"))
-            {
-                KeywordRepeat();
-            }
-            else if (_tmpStr.Equals("Define1")) {
-                keywordDefine1();
-            }
-            else if (_tmpStr.Equals("Define2"))
-            {
-                keywordDefine2();
-            }
-            else
-            {
-                return false;
-            }
-
-            return true;
+            return ITextPrinter.IsKeywordText();
 
         }
 
 
         #region 명령어 텍스트별 행동 정의(override 가능)
 
-        protected virtual void KeywordPass() {
-            textListCounter++;
-            Timers.StopTimer(TimerType.TEXT_TIMER);
-            Timers.StartTimer(TimerType.STAGE_TIC_TIMER);
-            bgm.Play();
-            TextboxVisible(false);
-        }
-
-        protected virtual void KeywordRepeat() {
-            textListCounter -= 1;
-            Timers.StopTimer(TimerType.TEXT_TIMER);
-            Timers.StartTimer(TimerType.STAGE_TIC_TIMER);
-            bgm.Play();
-            TextboxVisible(false);
-        }
-
         protected virtual void keywordDefine1() {
-            textListCounter++;
+
         }
 
         protected virtual void keywordDefine2()
@@ -529,7 +411,9 @@ namespace WindowsFormsApp1
             if (stageMode == StageMode.TUTORIAL)
             {
                 stageMode = StageMode.AUTO;//키 입력 방지
+
                 TextboxVisible(true);
+
                 SetBGMVolum(0.0f);
                 bgm.Position = new TimeSpan(0, 0, 0, 0, defaultBGMSyncOffset);
                 Timers.StartTimer(TimerType.TEXT_TIMER);
@@ -560,7 +444,8 @@ namespace WindowsFormsApp1
 
             if (score == _currectScore)
             {
-                textListCounter += 2;
+                ITextPrinter.keywordRepeatJump();
+                //keywordRepeatJump();
                 isCurrect = true;
             }
             else
@@ -672,10 +557,10 @@ namespace WindowsFormsApp1
             Timers.StopTimer(TimerType.TEXT_TIMER);
 
 
-
-            textIndexer = 0;
+            //todo:??
+            /*textIndexer = 0;
             textListCounter = 0;
-            isFin = false;
+            isFin = false;*/
 
             TextboxVisible(false);
             InitTextBox();
@@ -1114,7 +999,7 @@ namespace WindowsFormsApp1
         /// </summary>
         public override void StageNodeSwitcher()
         {
-            if (bgm.Position.TotalMilliseconds >= cntex + bpm * 4 - 45 + 25)//ttat
+            if (bgm.Position.TotalMilliseconds >= cntex + bpm * 4 - 45 + 25 - 12)//ttat
             {
                 testNodeSwitcher(cnt, note_selector);
                 cnt++;
@@ -1292,7 +1177,7 @@ namespace WindowsFormsApp1
 
     }
 
-    class ResultScene : ScenePictureClass{
+    public class ResultScene : ScenePictureClass{
 
         private enum ResultState { TEXT_PRINT, IMAGE_PRINT}
         private ResultState currentResultState;
@@ -1360,10 +1245,12 @@ namespace WindowsFormsApp1
             currentResultState = ResultState.IMAGE_PRINT;
             SceneChanger.ChangeScene(this);
             resultImagePicBox.pictureBox.Image = resultImagePicBox.images[0];
+            base.keywordDefine2();
 
         }
 
         #endregion
+
 
         /// <summary>
         /// 장면 입장 전 호출, 결산 등급과 스테이지 종류에 따라 세팅(전처리)

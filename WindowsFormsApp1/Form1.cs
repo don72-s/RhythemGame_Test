@@ -6,7 +6,6 @@ using System.Drawing.Imaging;
 using System.Windows.Forms;
 
 
-//나중에 수정 가능성 큼 : **ta
 
 namespace WindowsFormsApp1
 {
@@ -15,13 +14,13 @@ namespace WindowsFormsApp1
     public enum Scene { NONE, LODING, START_MENU, MAIN_MENU, OPTION, STAGE_1, STAGE_2, STAGE_3, STAGE_4, RESULT, EXIT }
     public enum MediaType { COFFEE, COUKIWOYOMENAI, CUR_MOVE, CAMERA, STAGE1_BACK, STAGE1_DOUBLESHOT, MISTAKE, STAGE2_BACK, RAINDROP_1, RAINDROP_2, STAGE3_BACK, STEAM, MACHIENE, STAGE4_BACK}
     public enum StageMode { TUTORIAL, NOMAL, AUTO}
-    enum InputState { FINE, DENY }
+    public enum InputState { FINE, DENY }
     enum ImageChangeDirection { PREVIOUS, NEXT}
 
-    public partial class Form1 : Form, ISceneChange
+    public partial class Form1 : Form
     {
         String filePath = Application.StartupPath;//실행파일 경로
-        Scene currentScene, destScene;
+        Scene currentScene;
         InputState currentInputState = InputState.DENY;
 
         #region 사운드 변수 초기화 + mediaType 추가하기!
@@ -29,6 +28,8 @@ namespace WindowsFormsApp1
         Dictionary<MediaType, MediaPlayer> mediaPlayerDic = new Dictionary<MediaType, MediaPlayer>();
 
         #endregion
+
+        ISceneChange iSceneChanger;
 
         #region 장면추가
         ScenePictureClass lodingScene;
@@ -52,16 +53,14 @@ namespace WindowsFormsApp1
         PicBox backgroundPicturebox = new PicBox();
 
         //페이딩 변수
-        float alpha = 1f;
-        float alphaOffset;
+        /*float alpha = 1f;
+        float alphaOffset;*/
 
         //사운드 로딩 현황 변수
         static int curSndDownloaded = 0;
 
-        private PictureBox blinkPictureBox;//깜빡거리는 이펙트 임시변수
-        private Image rollbackImg;
 
-        private int xPos, yPos;//스테이지 3 변수
+        public int xPos, yPos;//스테이지 3 변수
         private bool isLR = true;
         public Stage3Helper stage3SubForm;
 
@@ -88,21 +87,25 @@ namespace WindowsFormsApp1
             //x좌표 계산
             xPos = this.DesktopLocation.X;
 
-            #region 장면 추가 및 picturebox 부모자식 연결
-            lodingScene = new ScenePictureClass(this);
-            startMenu = new ScenePictureClass(this);
-            optionMenu = new ScenePictureClass(this);
-            mainMenu = new ScenePictureClass(this);
+            iSceneChanger = new SceneFader(this, backgroundPicturebox, SceneDic);
 
-            stage_1 = new Stage1(this);
-            stage_2 = new Stage2(this);
+            #region 장면 추가 및 picturebox 부모자식 연결
+            lodingScene = new ScenePictureClass(iSceneChanger);
+            startMenu = new ScenePictureClass(iSceneChanger);
+            optionMenu = new ScenePictureClass(iSceneChanger);
+            mainMenu = new ScenePictureClass(iSceneChanger);
+
+            stage_1 = new Stage1(iSceneChanger);
+            stage_2 = new Stage2(iSceneChanger);
 
             stage3SubForm = new Stage3Helper(pictureBox1.Size, this);
-            stage_3 = new Stage3(this, stage3SubForm);
+            stage_3 = new Stage3(iSceneChanger, stage3SubForm);
 
-            stage_4 = new Stage4(this, stage_1, stage_2, stage_3, stage3SubForm);
+            stage_4 = new Stage4(iSceneChanger, stage_1, stage_2, stage_3, stage3SubForm);
 
-            resultScene = new ResultScene(this);
+            resultScene = new ResultScene(iSceneChanger);
+
+            iSceneChanger.initResultScene(resultScene);
 
             //부모자식 순서대로 나열 및 선언, textbox가 부모면 그 labelControl을 부모로 지정!
             PicBox startMenuPic = new PicBox(startmenuImgBox, pictureBox1);
@@ -155,7 +158,6 @@ namespace WindowsFormsApp1
             {
 
                 List<Image> imageList = RWImageData.deserializImageData();
-                //label1.Text = imageList.Count.ToString();
                 int cnt = 0;
 
                 #region 장면 추가 fin (이미지 로딩 -> 배포 시에는 .dat파일에서 비트맵 역직렬화, 딕셔너리에 클래스 추가)
@@ -573,6 +575,9 @@ namespace WindowsFormsApp1
                 stage_4.BackgrndBuffer = imageList[cnt++];
                 stage_4.BackgrndDefault = imageList[cnt++];
 
+                //텍스트박스 추가작업
+                stage_4.textboxSetting();
+
                 SceneDic.Add(Scene.STAGE_4, stage_4);
 
                 //-------------------------------------------------------------------------------------------------------------------
@@ -658,13 +663,10 @@ namespace WindowsFormsApp1
 
 
                 //각 씬에 bgm 등록 ( 없으면 생략 )
-                stage_1.BGM = mediaPlayerDic[MediaType.STAGE1_BACK];
-
-                stage_2.BGM = mediaPlayerDic[MediaType.STAGE2_BACK];
-
-                stage_3.BGM = mediaPlayerDic[MediaType.STAGE3_BACK];
-
-                stage_4.BGM = mediaPlayerDic[MediaType.STAGE4_BACK];
+                stage_1.setBGM(mediaPlayerDic[MediaType.STAGE1_BACK]);
+                stage_2.setBGM(mediaPlayerDic[MediaType.STAGE2_BACK]);
+                stage_3.setBGM(mediaPlayerDic[MediaType.STAGE3_BACK]);
+                stage_4.setBGM(mediaPlayerDic[MediaType.STAGE4_BACK]);
                 
                 #endregion
 
@@ -690,20 +692,22 @@ namespace WindowsFormsApp1
                 SoundPlayer.PlayFX(MediaType.CUR_MOVE);//1
                 if (startMenu.getCurState() == 0)
                 {
-                    ChangeScene(Scene.MAIN_MENU, true);
+                    iSceneChanger.ChangeScene(Scene.MAIN_MENU, true);
                 }
                 else if (startMenu.getCurState() == 1)
                 {
-                    ChangeScene(Scene.OPTION, true);
+                    iSceneChanger.ChangeScene(Scene.OPTION, true);
                 }
                 else if (startMenu.getCurState() == 2)
                 {
-                    ChangeScene(Scene.EXIT);
+                    iSceneChanger.ChangeScene(Scene.EXIT);
                 }
             });
+            //이미지 초기 설정 행동 정의
+            /*
             startMenu.AddKeyInputEvent(Keys.T, () => {
                 RWImageData.serializeImageData();
-            });
+            });*/
 
             optionMenu.AddKeyInputEvent(Keys.Left, () =>
             {
@@ -760,7 +764,7 @@ namespace WindowsFormsApp1
             optionMenu.AddKeyInputEvent(Keys.X, () =>
             {
                 SoundPlayer.PlayFX(MediaType.CUR_MOVE);
-                ChangeScene(Scene.START_MENU, true);
+                iSceneChanger.ChangeScene(Scene.START_MENU, true);
             });
 
             mainMenu.AddKeyInputEvent(Keys.Left, () => {
@@ -801,7 +805,7 @@ namespace WindowsFormsApp1
                 if (mainMenu.getCurStackSize() == 1)
                 {
                     mainMenu.PrintTextLineByIndex(mainMenu.getCurState(0), true);
-                    ChangeScene(Scene.START_MENU, true);
+                    iSceneChanger.ChangeScene(Scene.START_MENU, true);
                 }
                 else
                 {
@@ -839,7 +843,7 @@ namespace WindowsFormsApp1
                             return;
                         }
 
-                        ChangeScene(Scene.STAGE_1, true);
+                        iSceneChanger.ChangeScene(Scene.STAGE_1, true);
 
 
                     }
@@ -861,7 +865,7 @@ namespace WindowsFormsApp1
                         {
                             return;
                         }
-                        ChangeScene(Scene.STAGE_2, true);
+                        iSceneChanger.ChangeScene(Scene.STAGE_2, true);
                     }
                     else if (mainMenu.getCurState(0) == 2)
                     {
@@ -885,20 +889,19 @@ namespace WindowsFormsApp1
                             return;
                         }
 
-                        //ttat 
 
                         xPos = DesktopLocation.X;
                         yPos = DesktopLocation.Y;
 
 
                         int borderSize = (Width - pictureBox1.Width) / 2;
-                        //label4.Text = borderSize.ToString();
+
                         stage3SubForm.SetDesktopLocation(xPos + borderSize, yPos + Height - borderSize + 100 - (pictureBox1.Width / 20));
                         stage3SubForm.setXpos(xPos + borderSize);
 
                         Activate();
 
-                        ChangeScene(Scene.STAGE_3, true);
+                        iSceneChanger.ChangeScene(Scene.STAGE_3, true);
 
                     }
                     else if (mainMenu.getCurState(0) == 3) {
@@ -922,12 +925,11 @@ namespace WindowsFormsApp1
 
 
                         int borderSize = (Width - pictureBox1.Width) / 2;
-                        //label4.Text = borderSize.ToString();
                         stage3SubForm.SetDesktopLocation(xPos + borderSize, yPos + Height - borderSize + 100 - (pictureBox1.Width / 20));
                         stage3SubForm.setXpos(xPos + borderSize);
 
                         stage3SubForm.Visible = false;
-                        ChangeScene(Scene.STAGE_4, true);
+                        iSceneChanger.ChangeScene(Scene.STAGE_4, true);
 
                     }
 
@@ -1156,6 +1158,24 @@ namespace WindowsFormsApp1
 
         }
 
+        public Scene getCurrentScene() {
+            return currentScene;
+        }
+
+        public void setCurrentScene(Scene _scene) {
+            currentScene = _scene;
+        }
+
+
+        public InputState getInputState() {
+            return currentInputState;
+        }
+
+        public void setInputState(InputState _inputState) { 
+            currentInputState = _inputState;
+        }
+
+
         private void AddSnd(MediaType _type, Uri _filePathUri) {
             MediaPlayer tmpPlayer = new MediaPlayer();
             tmpPlayer.MediaOpened += new System.EventHandler(SndLodeFinished);
@@ -1168,7 +1188,6 @@ namespace WindowsFormsApp1
         private void Form1_Load(object sender, EventArgs e)
         {
             currentScene = Scene.LODING;
-            destScene = Scene.NONE;
 
             int cnt = 0;
 
@@ -1180,7 +1199,7 @@ namespace WindowsFormsApp1
 
             }
             else {
-                //label1.Text = "사운드 링크 오류";
+                //todo : throw 사운드 링크 에러
             }
 
 
@@ -1267,7 +1286,7 @@ namespace WindowsFormsApp1
 
         #endregion
 
-        private void CloseForm()
+        public void CloseForm()
         {
             this.Close();
         }
@@ -1276,12 +1295,10 @@ namespace WindowsFormsApp1
         private void SndLodeFinished(object sender, EventArgs e)
         {
             curSndDownloaded++;
-            //label1.Text = curSndDownloaded.ToString();
             if (curSndDownloaded >= mediaPlayerDic.Count)
             {
                 SoundPlayer.setMediaDic(mediaPlayerDic);
-                //label1.Text = SystemInformation.CaptionHeight.ToString();
-                ChangeScene(Scene.START_MENU);
+                iSceneChanger.ChangeScene(Scene.START_MENU);
             }
 
 
@@ -1294,8 +1311,7 @@ namespace WindowsFormsApp1
 
         private void stage1BlinkTimer_Tick(object sender, EventArgs e)
         {
-            Timers.StopTimer(TimerType.BLINK_TIMER);
-            blinkPictureBox.Image = rollbackImg;
+            iSceneChanger.BlinkTimerCallback();
         }
 
         private void stageTicTimer_Tick(object sender, EventArgs e)
@@ -1324,276 +1340,14 @@ namespace WindowsFormsApp1
 
         #endregion
 
-
-        #region ISceneChanger 인터페이스 영역
-
-        public void Blink(PictureBox _pictureBox, Image _blinkImg, int _blinkTime) {
-
-            blinkPictureBox = _pictureBox;
-            rollbackImg = blinkPictureBox.Image;
-            blinkPictureBox.Image = _blinkImg;
-
-            Timers.SetInterval(TimerType.BLINK_TIMER, _blinkTime);
-            Timers.StartTimer(TimerType.BLINK_TIMER);
-        }
-
-        public void Blink(PictureBox _pictureBox, Image _blinkImg, Image _rollbackImg, int _blinkTime)
-        {
-
-            blinkPictureBox = _pictureBox;
-            rollbackImg = _rollbackImg;
-            blinkPictureBox.Image = _blinkImg;
-
-            Timers.SetInterval(TimerType.BLINK_TIMER, _blinkTime);
-            Timers.StartTimer(TimerType.BLINK_TIMER);
-        }
-
-        public void moveDown() {
-            SetDesktopLocation(xPos, yPos + 100);
-        }
-
-        public void moveUp()
-        {
-            SetDesktopLocation(xPos, yPos);
-        }
-
-        public void SetResultScene(Scene _fromScene, int _clearLevel) {
-            resultScene.setResultScene(_fromScene, _clearLevel);
-        }
-
-        #endregion
-        
-        #region 페이딩
-
-        //장면들 임시저장 변수
-        private ScenePictureClass currentSceneTmp;
-        private ScenePictureClass afterSceneTmp;
-
-        /// <summary>
-        /// 현재 장면 상태를 옮기면서 장면 전환
-        /// </summary>
-        /// <param name="nextScene">옮겨갈 장면의 상태</param>
-        /// <param name="_isSaveBuffer">페이딩시 캡쳐한 이미지를 나중에 페이드 인 시에 사용할지.</param>
-        /// <param name="interval">페이딩 틱 주기</param>
-        /// <param name="_alphaOffset">페이딩 투명도 증감 정도</param>
-        public void ChangeScene(Scene nextScene,bool _isSaveBuffer = false, int interval = 35, float _alphaOffset = 0.1f, bool isBGMContinue = false)
-        {
-            if (nextScene == Scene.EXIT)
-            {
-                CloseForm();
-                return;
-            }
-            isSaveBuffer = _isSaveBuffer;
-            currentSceneTmp = SceneDic[currentScene];
-            afterSceneTmp = SceneDic[nextScene];
-            
-
-            ChangeScene(interval, _alphaOffset, isBGMContinue);
-
-            currentScene = nextScene;
-            //_3.Text = currentScene.ToString();
-        }
-
-        /// <summary>
-        /// 현재 장면 상태를 옮기면서 장면 전환
-        /// </summary>
-        /// <param name="nextScene">옮겨갈 장면의 상태</param>
-        /// <param name="_isSaveBuffer">페이딩시 캡쳐한 이미지를 나중에 페이드 인 시에 사용할지.</param>
-        /// <param name="interval">페이딩 틱 주기</param>
-        /// <param name="_alphaOffset">페이딩 투명도 증감 정도</param>
-        public void ChangeScene(ScenePictureClass _fromScene, Scene nextScene, bool _isSaveBuffer = false, int interval = 35, float _alphaOffset = 0.1f, bool isBGMContinue = false)
-        {
-            if (nextScene == Scene.EXIT)
-            {
-                CloseForm();
-                return;
-            }
-            isSaveBuffer = _isSaveBuffer;
-            currentSceneTmp = _fromScene;
-            afterSceneTmp = SceneDic[nextScene];
-
-
-            ChangeScene(interval, _alphaOffset, isBGMContinue);
-
-            currentScene = nextScene;
-            //_3.Text = currentScene.ToString();
-        }
-
-        /// <summary>
-        /// 현재 장면 상태를 유지하면서 장면만 전환
-        /// </summary>
-        /// <param name="nextScene">출력 장면으로 변경할 클래스</param>
-        /// <param name="_isSaveBuffer">페이딩시 캡쳐한 이미지를 나중에 페이드 인 시에 사용할지.</param>
-        /// <param name="interval">페이딩 틱 주기</param>
-        /// <param name="_alphaOffset">페이딩 투명도 증감 정도</param>
-        public void ChangeScene(ScenePictureClass _fromScene, ScenePictureClass nextScene, bool _isSaveBuffer = false, int interval = 35, float _alphaOffset = 0.1f, bool isBGMContinue = false)
-        {
-            isSaveBuffer = _isSaveBuffer;
-            currentSceneTmp = _fromScene;
-            afterSceneTmp = nextScene;
-
-            ChangeScene(interval, _alphaOffset, isBGMContinue);
-        }
-
-        /// <summary>
-        /// 현재 장면 상태를 유지하면서 장면만 전환
-        /// </summary>
-        /// <param name="nextScene">출력 장면으로 변경할 클래스</param>
-        /// <param name="_isSaveBuffer">페이딩시 캡쳐한 이미지를 나중에 페이드 인 시에 사용할지.</param>
-        /// <param name="interval">페이딩 틱 주기</param>
-        /// <param name="_alphaOffset">페이딩 투명도 증감 정도</param>
-        public void ChangeScene(ScenePictureClass nextScene, bool _isSaveBuffer = false, int interval = 35, float _alphaOffset = 0.1f, bool isBGMContinue = false)
-        {
-            isSaveBuffer = _isSaveBuffer;
-            currentSceneTmp = SceneDic[currentScene];
-            afterSceneTmp = nextScene;
-
-            ChangeScene(interval, _alphaOffset, isBGMContinue);
-        }
-
-
-        private Image tmpImg;
-        private bool isSaveBuffer;
-
-        private void ChangeScene(int interval, float _alphaOffset, bool isBGMContinue)
-        {
-
-            Timers.SetInterval(TimerType.FADING_TIMER, interval);
-
-            currentInputState = InputState.DENY;
-
-            //새로찍은 이미지
-            Bitmap bitmap = new Bitmap(backgroundPicturebox.pictureBox.Width, backgroundPicturebox.pictureBox.Height);
-            backgroundPicturebox.pictureBox.DrawToBitmap(bitmap, new Rectangle(0, 0, backgroundPicturebox.pictureBox.Width, backgroundPicturebox.pictureBox.Height));
-            backgroundPicturebox.pictureBox.Image = bitmap;
-
-
-            foreach (PicBox _p in currentSceneTmp.getPlayerControlPicboxes())
-            {
-                _p.pictureBox.Visible = false;
-            }
-
-            foreach (PicBox _p in currentSceneTmp.GetStaticPicBoxes())
-            {
-                _p.pictureBox.Visible = false;
-            }
-
-            foreach (PicBox _p in currentSceneTmp.GetIndependentPicBoxes())
-            {
-                _p.pictureBox.Visible = false;
-            }
-
-            tmpImg = bitmap;
-
-            alphaOffset = -_alphaOffset;
-
-
-            //다음장면의 bgm이 같은 bgm일 경우 bgm을 끊지 않고 계속 재생함
-            afterSceneTmp.IsBGMContinue = isBGMContinue ? true : SceneDic[currentScene].StopBGM(afterSceneTmp.BGM);
-
-            Timers.StartTimer(TimerType.FADING_TIMER);
-        }
-
-
-        public List<Bitmap> l = new List<Bitmap>();
         private void fading_Tick(object sender, EventArgs e)
         {
-            alpha += alphaOffset;
-
-            l.Add(Fading());
-
-            if (alpha <= 0)//페이드 아웃 종료
-            {
-                alpha = 0;
-                alphaOffset = -alphaOffset;
-
-                if (isSaveBuffer)
-                {
-   
-                    currentSceneTmp.BackgrndBuffer.Dispose();
-                    currentSceneTmp.BackgrndBuffer = tmpImg;
-
-                }
-                else {
-                    tmpImg.Dispose();
-
-                }
-                
-                tmpImg = afterSceneTmp.BackgrndBuffer;
-
-                currentSceneTmp = afterSceneTmp;
-                destScene = Scene.NONE;
-            }
-            else if (alpha >= 1)
-            {//페이드 인 종료
-                Timers.StopTimer(TimerType.FADING_TIMER);
-                Timers.StartTimer(TimerType.FADING_SUB_TIMER);
-            }
+            iSceneChanger.FadingTimerCallback();
         }
-
-        private Bitmap Fading()
-        {
-            Image _img = tmpImg;
-            Bitmap bit = new Bitmap(_img.Width, _img.Height);
-            Graphics g = Graphics.FromImage(bit);
-            ColorMatrix colorMatrix = new ColorMatrix();
-            colorMatrix.Matrix33 = alpha;
-            ImageAttributes imgatt = new ImageAttributes();
-            imgatt.SetColorMatrix(colorMatrix, ColorMatrixFlag.Default, ColorAdjustType.Bitmap);
-
-            g.DrawImage(_img, new Rectangle(0, 0, bit.Width, bit.Height), 0, 0, _img.Width, _img.Height, GraphicsUnit.Pixel, imgatt);
-
-            g.Dispose();
-            backgroundPicturebox.pictureBox.Image = bit;
-            return bit;
-        }
-
         private void subFading_Tick(object sender, EventArgs e)
         {
-            Timers.StopTimer(TimerType.FADING_SUB_TIMER);
-            endFading();
+            iSceneChanger.SubFadingTimerCallback();
         }
-
-        void endFading()
-        {
-            List<PicBox> tmpPicBoxes = new List<PicBox>();
-            tmpPicBoxes = afterSceneTmp.getPlayerControlPicboxes();
-
-            if (tmpPicBoxes.Count > 0)
-            {
-                for (int i = 0; i < afterSceneTmp.getCurStackSize(); i++)//스택 크기만큼 조작가능 이미지 활성화
-                {
-                    tmpPicBoxes[i].pictureBox.Visible = true;
-                }
-            }
-
-            foreach (PicBox _p in afterSceneTmp.GetStaticPicBoxes())
-            {
-                _p.pictureBox.Visible = true;
-            }
-
-            foreach (PicBox _p in afterSceneTmp.GetIndependentPicBoxes())
-            {
-                _p.pictureBox.Visible = true;
-            }
-
-            afterSceneTmp.SceneStart();
-
-            foreach (Bitmap _b in l)
-            {
-                _b.Dispose();
-            }
-
-            l.Clear();
-
-
-            backgroundPicturebox.pictureBox.Image.Dispose();
-            backgroundPicturebox.pictureBox.Image = afterSceneTmp.BackgrndDefault;
-            currentInputState = InputState.FINE;
-
-        }
-
-        #endregion
         
     }
 

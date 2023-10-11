@@ -8,7 +8,7 @@
     <OutputType>WinExe</OutputType>
     <RootNamespace>WindowsFormsApp1</RootNamespace>
     <AssemblyName>WindowsFormsApp1</AssemblyName>
-    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <IsWebBootstrapper>false</IsWebBootstrapper>
@@ -26,6 +26,7 @@
     <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
     <UseApplicationTrust>false</UseApplicationTrust>
     <BootstrapperEnabled>true</BootstrapperEnabled>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -50,15 +51,8 @@
   <ItemGroup>
     <Reference Include="PresentationCore" />
     <Reference Include="System" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Deployment" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Windows.Forms" />
-    <Reference Include="System.Xml" />
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
@@ -69,10 +63,10 @@
     <Compile Include="Form1.Designer.cs">
       <DependentUpon>Form1.cs</DependentUpon>
     </Compile>
-    <Compile Include="InterfaceGroup.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Scene.cs" />
+    <Compile Include="SceneFader.cs" />
     <Compile Include="SoundManager.cs" />
     <Compile Include="NoteArray.cs" />
     <Compile Include="Stage3Helper.cs">
@@ -81,6 +75,7 @@
     <Compile Include="Stage3Helper.Designer.cs">
       <DependentUpon>Stage3Helper.cs</DependentUpon>
     </Compile>
+    <Compile Include="TextPrinter.cs" />
     <Compile Include="TimerGroup.cs" />
     <EmbeddedResource Include="Form1.resx">
       <DependentUpon>Form1.cs</DependentUpon>
@@ -89,7 +84,6 @@
       <Generator>ResXFileCodeGenerator</Generator>
       <SubType>Designer</SubType>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </EmbeddedResource>
     <EmbeddedResource Include="Stage3Helper.resx">
       <DependentUpon>Stage3Helper.cs</DependentUpon>
@@ -102,7 +96,6 @@
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Compile>
     <Compile Include="Properties\Settings.Designer.cs">
       <AutoGen>True</AutoGen>
@@ -249,46 +242,21 @@
     <None Include="Resources\textbox_800_140.png" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="none.png" />
     <None Include="Resources\back001_Buffer.png" />
     <None Include="Resources\optionBackBuffer.png" />
     <None Include="Resources\startBackBuffer.png" />
-    <None Include="Resources\stage1_doubleShot.wav">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Include="Resources\mistake.wav">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Include="Resources\stage2_back.wav">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Include="Resources\stage1back.wav">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Include="Resources\stage4back.wav">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Include="Resources\stage3_back.wav">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Include="Resources\raindrop2.wav">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Include="Resources\raindrop1.wav">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Include="Resources\camera_tmp.wav">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Include="Resources\testCrash.wav">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Include="Resources\SteamEffect.wav">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Include="Resources\startMenuCurSnd.wav">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
+    <None Include="Resources\stage1_doubleShot.wav" />
+    <None Include="Resources\mistake.wav" />
+    <None Include="Resources\stage2_back.wav" />
+    <None Include="Resources\stage1back.wav" />
+    <None Include="Resources\stage4back.wav" />
+    <None Include="Resources\stage3_back.wav" />
+    <None Include="Resources\raindrop2.wav" />
+    <None Include="Resources\raindrop1.wav" />
+    <None Include="Resources\camera_tmp.wav" />
+    <None Include="Resources\testCrash.wav" />
+    <None Include="Resources\SteamEffect.wav" />
+    <None Include="Resources\startMenuCurSnd.wav" />
     <None Include="Resources\option_cur2.png" />
     <None Include="Resources\option_cur1.png" />
     <None Include="Resources\sndEff1.png" />
@@ -327,9 +295,7 @@
     <None Include="Resources\결산3.png" />
     <None Include="Resources\결산2.png" />
     <None Include="Resources\결산1.png" />
-    <None Include="Resources\scoreBack.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
+    <None Include="Resources\scoreBack.png" />
     <None Include="Resources\idle2.png" />
     <None Include="Resources\looking_up.png" />
     <None Include="Resources\looking_forward.png" />
