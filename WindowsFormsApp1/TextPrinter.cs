@@ -31,7 +31,7 @@ namespace WindowsFormsApp1
         void PrintText();
         /// <summary>
         /// 출력할 스트링 디렉토리 인덱스, 즉시출력 설정,
-        /// 텍스트가 이미 전부 출력되어 있었으면 true 반환
+        /// 텍스트가 이미 전부 출력되어 있었으면 true 반환 
         /// 다음으로 넘어가지는 않음
         /// </summary>
         /// <param name="_index">인덱스</param>
